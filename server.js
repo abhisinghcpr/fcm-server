@@ -4,7 +4,7 @@ const admin = require("firebase-admin");
 const app = express();
 app.use(express.json());
 
-// 🔥 FIREBASE KEY
+// 🔥 FIREBASE KEY (Render ENV)
 const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
 
 admin.initializeApp({
@@ -13,9 +13,9 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
-// =============================
-// 🔥 AUTO NOTIFICATION LISTENER
-// =============================
+// =======================================
+// 🔥 AUTO NOTIFICATION (REAL TIME)
+// =======================================
 db.collection("chats").onSnapshot((snapshot) => {
   snapshot.docChanges().forEach(async (change) => {
     if (change.type === "modified") {
@@ -30,31 +30,38 @@ db.collection("chats").onSnapshot((snapshot) => {
       const receiverId = users.find((u) => u !== senderId);
 
       try {
-        // 🔥 GET TOKEN
+        // 🔥 RECEIVER TOKEN
         const userDoc = await db.collection("users").doc(receiverId).get();
         const token = userDoc.data()?.fcmToken;
 
         if (token && lastMessage) {
           await admin.messaging().send({
             token: token,
+
             notification: {
               title: "New Message 💬",
               body: lastMessage,
+            },
+
+            // 🔥 VERY IMPORTANT (chat open)
+            data: {
+              senderId: senderId,
+              chatId: change.doc.id,
             },
           });
 
           console.log("🔥 Auto Notification Sent");
         }
       } catch (e) {
-        console.log("❌ Auto Notification Error:", e);
+        console.log("❌ Notification Error:", e);
       }
     }
   });
 });
 
-// =============================
+// =======================================
 // 🔥 MANUAL API (optional)
-// =============================
+// =======================================
 app.post("/send", async (req, res) => {
   const { token, message } = req.body;
 
@@ -74,7 +81,9 @@ app.post("/send", async (req, res) => {
   }
 });
 
-// 🔥 SERVER START
+// =======================================
+// 🔥 SERVER START (Render Compatible)
+// =======================================
 app.listen(process.env.PORT || 3000, () => {
-  console.log("Server running");
+  console.log("Server running 🚀");
 });
