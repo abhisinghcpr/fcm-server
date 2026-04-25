@@ -30,27 +30,40 @@ db.collection("chats").onSnapshot((snapshot) => {
       const receiverId = users.find((u) => u !== senderId);
 
       try {
-        // 🔥 RECEIVER TOKEN
-        const userDoc = await db.collection("users").doc(receiverId).get();
-        const token = userDoc.data()?.fcmToken;
+        /// 🔥 RECEIVER TOKEN
+        const receiverDoc = await db.collection("users").doc(receiverId).get();
+        const token = receiverDoc.data()?.fcmToken;
+
+        /// 🔥 SENDER DATA (IMPORTANT)
+        const senderDoc = await db.collection("users").doc(senderId).get();
+
+        const senderName = senderDoc.data()?.name || "User";
+        const senderImage = senderDoc.data()?.image || "";
 
         if (token && lastMessage) {
-          await admin.messaging().send({
-            token: token,
+await admin.messaging().send({
+  token: token,
 
-            notification: {
-              title: "New Message 💬",
-              body: lastMessage,
-            },
+  notification: {
+    title: senderName,
+    body: lastMessage,
+  },
 
-            // 🔥 VERY IMPORTANT (chat open)
-            data: {
-              senderId: senderId,
-              chatId: change.doc.id,
-            },
-          });
+  android: {
+    notification: {
+      imageUrl: senderImage, // 🔥 profile image
+    },
+  },
 
-          console.log("🔥 Auto Notification Sent");
+  data: {
+    senderId: senderId,
+    senderName: senderName,
+    senderImage: senderImage,
+    chatId: change.doc.id,
+  },
+});
+
+          console.log("🔥 Auto Notification Sent with Name & Image");
         }
       } catch (e) {
         console.log("❌ Notification Error:", e);
@@ -58,7 +71,6 @@ db.collection("chats").onSnapshot((snapshot) => {
     }
   });
 });
-
 // =======================================
 // 🔥 MANUAL API (optional)
 // =======================================
